@@ -1,0 +1,414 @@
+\documentclass[9pt]{article}
+
+\usepackage[frenchb]{babel}
+
+\usepackage{xltxtra}
+
+%\usepackage{lmodern}
+\renewcommand*\familydefault{\sfdefault} 
+\usepackage[T1]{fontenc}
+\usepackage{inconsolata}
+
+
+\usepackage[a4paper, total={210mm,297mm}, top=30mm]{geometry}
+\usepackage[cm]{fullpage}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
+
+\definecolor{code}{HTML}{000000}
+\definecolor{text}{HTML}{2E2E2E}
+\definecolor{codeframe}{HTML}{CCCCCC}
+
+\usepackage{parskip}
+
+\lstset{language=C++,
+        escapeinside={(*@}{@*)},
+        basicstyle=\ttfamily\color{code}\small,
+        commentstyle=\color{text},
+        showstringspaces=false,
+        extendedchars=true,
+        breaklines=true,
+        showtabs=false,
+        showspaces=false,
+        showstringspaces=false,
+        frame=l,
+        rulecolor=\color{codeframe},
+        rulesep=5pt,
+        framexleftmargin=5pt,
+        framerule=5pt,
+        xleftmargin=5mm,
+        columns=fullflexible
+        } 
+
+
+
+
+\title{Modern C++ et gestion des ressources}
+\author{Corentin Jabot}
+\date{}
+
+\begin{document}
+
+\addtolength{\voffset}{4mm}
+
+\renewcommand{\labelitemi}{$\bullet$}
+
+
+\newcounter{QC}
+\newcommand{\qn}{\refstepcounter{QC}{\vspace{1\baselineskip}\noindent \large \texttt{Question \arabic{QC}}}\\}
+
+\NoAutoSpacing
+
+
+\makeatletter
+\begin{center}%
+{\LARGE \@title \par}
+\end{center}%
+\makeatother
+
+\section*{Objectifs du TD}
+
+Ce TD va vous amener à découvrir comment gérer la mémoire et les ressources système en C++11 grâce à la présentation de deux nouveaux concepts : La sémantique de mouvement, et les \og smarts pointers\fg (pointeurs intelligents).
+
+\color{text}
+
+\section {Rappels sur la \og sémantique de valeur \fg{}}
+
+La classe \lstinline{Point} introduite au TD2 est de retour ! 
+
+\qn
+Pour chacune des expressions suivantes, quelles \og fonctions membres spéciales \fg sont appellées ?
+(on appelle  fonctions membres spéciales l'ensemble des constructeurs, destructeurs et opérateurs d'affectation.)
+
+\smallskip
+
+\begin{tabular}{ | l | l | l | l | l |}
+\hline
+& {\lstinline!Point()!} & {\lstinline!Point(int x, int y)!} & {\lstinline!Point(const Point&)!} & {\lstinline!Point::operator=(const Point & other)!} \\
+\hline
+{\lstinline!Point a(0,1);!} &  &  &  & \\
+{\lstinline!Point a = Point(0,1);!} &  &  &  & \\  
+{\lstinline!Point b = a;!} &  &  &  & \\  
+{\lstinline!b = a;!}       &  &  &  & \\    
+\hline
+{\lstinline!Point a = {0, 1};!}  &  &  &  & \\
+\hline         
+\end{tabular}
+
+\qn
+
+\begin{lstlisting}
+Point midpoint(Point a, Point b) {
+	return Point (
+		(a.x() + b.x()) / 2,
+		(a.y() + b.y()) / 2
+	);
+}
+Point a(0, 0);
+Point b(84, 84);
+Point c = midpoint(a, b);
+\end{lstlisting}
+
+
+\begin{itemize}
+\item Que fait la fonction  \lstinline{midpoint} ? Quelles sont les coordonées du point \lstinline{c} ?
+\item Combien de copies de \lstinline{a} et de \lstinline{b} sont effectuées ? Combien de fois la valeur de retour est-elle copiée ?
+\item Changer la signature de la fonction pour réduire le nombre de copies. 
+\end{itemize}
+
+
+\section{La classe dynarray}
+
+La classe \lstinline{std:::dynarray} est un conteneur (TAD) séquentiel ( les objets sont alloués sur le tas et se suivent en mémoire), dont la taille est déterminée à l'instanciation de la classe et ne change pas pendant la durée de vie de l'objet.
+Elle s'utilise comme cela :
+
+\begin{lstlisting}
+dynarray<std::string>  bondMovies(24); // crée un tableau de 24 éléments, de taille fixe.
+bondMovies[0] = "Dr. No"; //accède ou modifie un élément à l'index donné
+\end{lstlisting}
+
+Malheureusement, cette classe ne fait pas encore partie du Standard C++ et on vous a chargé de proposer une implémentation d'une partie de cette classe.
+
+\qn
+Vous trouverez sur la page suivante une interface minimale pour cette classe. Vous remarquerez que les méthodes de la classe sont déclarées, mais les variables membres ont été oubliées! Complétez l'interface de la classe avec les variables membres nécessaires.  
+
+\newpage
+
+\begin{lstlisting}
+template <typename T>
+class dynarray {
+public:
+	dynarray(std::size_t);
+
+	
+	std::size_t size() const;
+	const T & operator[](std::size_t index) const;
+	T & operator[](std::size_t index);
+
+private:
+	
+	
+	
+	
+}
+\end{lstlisting}
+
+\qn
+Proposez une implémentation du constructeur \lstinline{dynarray<T>::dynarray(std::size_t)}.
+Quelles sont les mesures particulières à prendre lorsque de la mémoire est allouée sur le tas ? Implémentez ces mesures.
+
+\vspace{5cm}
+\subsection*{Règle de 3}
+
+\qn
+"La règle de 3" stipule que si un destructeur, un opérateur de copie ou un opérateur d'assignement est défini, alors les 2 autres devraient également être définis.
+Justifiez cette règle.
+Modifiez votre implémentation de la classe \lstinline{dynarray} en fonction.
+
+\newpage
+\qn
+
+\begin{lstlisting}
+dynarray<std::string> collectNames() {
+	
+	std::size_t size = 1'000'000;
+	dynarray<std::string> names(size);
+	//...
+	return names;
+}
+
+void foo() {
+	dynarray<std::string> names = colllectNames();
+}
+\end{lstlisting}
+
+
+Combien d'instances de \lstinline{dynarray} sont créées dans cet extrait de code ? Combien d'instances de
+\lstinline{std::string} ?
+Quels sont les problèmes de performances posés par ce code ? Proposez des solutions. 
+
+\vspace{1cm}
+
+
+\section{RAII - Ressource acquisition is initialization}
+
+\qn
+Citez des exemples de classes qui respectent le principe de RAII
+
+\vspace{1cm}
+\qn
+Proposez une classe \lstinline{File} qui encapsule un descripteur de fichier POSIX (\lstinline{FILE*}), en respectant le principe de RAII. Quelles sont les méthodes que vous devrez implémenter ?
+
+\qn
+\begin{lstlisting}
+Shape* shapeFromName(const std::string & string ) {
+	if(string == "square")
+		return new Square;
+	if(string == "triangle")
+		return new Triangle;
+	return 0;
+}
+void f() {
+	Shape* shape = shapeFromName("triangle");
+}
+\end{lstlisting}
+
+Identifiez les problèmes dans ce code.
+
+Peut-on réécrire la fonction \lstinline{shapeFromName} pour retourner une valeur plutôt qu'un pointeur ? une référence ? Justifiez.
+
+
+\newpage
+
+\section{Pointeurs intelligents}
+
+\qn
+Réécrivez la fonction \lstinline{shapeFromName} pour utiliser un pointeur intelligent. Quel pointeur intelligent devez vous utiliser ?
+
+\vspace{0.5cm}
+
+\qn
+La fonction \lstinline{shapeName} retourne le nom d'une forme.
+Complétez le code suivant, de sorte qu'il s'exécute correctement:
+
+\begin{lstlisting}
+
+std::(*@\line(1,0){100}@*)<Shape> shapeFromName(const std::string &);
+
+std:string shapeName((*@\line(1,0){100}@*)shape) {
+	
+	
+	
+	return shape->name();
+}
+void f() {
+	(*@\line(1,0){100}@*) shape = shapeFromName("hello");
+	std:: cout << shapeName((*@\line(1,0){100}@*)) << std::endl;
+}
+	
+
+\end{lstlisting}
+\vspace{1cm}
+
+\qn
+
+Voici l'interface ( simplifiée ), de la classe  \lstinline{std::unique_ptr}.
+
+\begin{lstlisting}
+template <typename T>
+class std::unique_ptr {
+	T* ptr;
+public:
+	unique_ptr(T*);
+	~unique_ptr();
+	
+	unique_ptr(const unique_ptr<T> &)  = delete;
+	unique_ptr(const unique_ptr<T> &&);
+	
+	T* operator->() const; 	
+	operator bool() const;
+	T& operator*() const;
+};
+\end{lstlisting}
+
+
+Cette classe comporte des opérateurs et des notations que vous n'avez jamais rencontré auparavant.
+De ce que vous connaissez du comportement des pointeurs et du fonctionnement de \lstinline{std::unique_ptr}, pouvez vous déduire le fonctionnement de chaque méthode ? 
+
+\newpage
+
+\section*{Annexe : C++11}
+
+La première version de C++ est publiée en 1983. Mais ce n'est qu'en 1998 que C++ est standardisé dans une norme ISO connue sous le nom de \og C++98 \fg{}. En 2011, une version majeure apporte un grand nombre de fonctionnalités qui changent la façon de développer en C++.
+La transformation est telle que les auteurs parlent souvent de \og Modern C++ \fg{}.
+C++14 généralise certaines fonctionnalités de C++11.
+
+Notez que le commité C++ publie un \og Standard \fg{} (un document), et non un compilateur. Il faut souvent attendre plusieurs années pour que l'ensemble des fonctionnalités soient implémentées par les différents compliateurs C++ existants. Toutefois, Clang, GCC, et MSVC implémentent la majorité du standard C++11, y compris l'ensemble des fonctionnalités présentées en TD et dans ce document.
+
+
+\subsection*{auto}
+
+\lstinline{auto} est un mot clé utilisé en lieu et place d'un type, qui laisse la charge au compilateur de déterminer le type de la variable, en fonction de l'expression qui lui est affectée. On parle d'\textbf{inférence de type}.
+
+\begin{lstlisting}
+auto a = 42; // a est de type int
+auto b = "geronimo"; // b est de type const char*
+a = b;  //erreur : impossible de convertir un const char* en int
+\end{lstlisting}
+
+\lstinline{auto} permet d'éviter les erreurs de conversion implicite, par exemple:
+\begin{lstlisting}
+std::vector<Stuff> thingies;
+auto size = thingies.size(); //size est du même type que std::vector::size(), à savoir... std::size_t !
+int incorrectSize =  thingies.size(); //conversion std::size_t -> int
+\end{lstlisting}
+
+Et simplifie l'écriture et la lecture du code. Considérez ces 2 façons de parcourir un vecteur, sans et avec \lstinline{auto}:
+
+\begin{lstlisting}
+for(std::vector<std::string>::iterator it = std::begin(vect); it != std::end(vect); ++it )
+	std::cout << *it << std::endl;
+\end{lstlisting}
+
+\begin{lstlisting}
+for(auto it = std::begin(vect); it != std::end(vect); ++ it)
+	std::cout << *it << std::endl;
+\end{lstlisting}
+		
+\subsection*{Boucle for simplifiée pour les intervalles}
+Il existe une façon encore plus simple de parcourir les tableaux et les conteneurs:
+
+\begin{lstlisting}
+std::vector<std::string> vect;
+//[...]
+for(const auto & elem : vect)
+	std::cout << elem;
+}
+\end{lstlisting}
+      
+\subsection*{nullptr}     
+
+En C++, la macro \lstinline{NULL} correspond à la valeur entière \lstinline{0}.
+
+La fonction foo offre une surcharge pour \lstinline{int} et \lstinline{void*},
+\begin{lstlisting}
+void foo(int i) {
+	std::count << i << "est un int";
+}
+void foo(void* ptr) {
+	std::count <<  ptr << "est un pointeur";
+}
+\end{lstlisting}
+
+Que pensez-vous qu'affiche \lstinline{foo(NULL);} ? "0 est un int" ... sans doute pas le résultat que vous cherchiez à obtenir !
+
+Pour éviter ce problème il est recommendé de toujours utiliser \lstinline{nullptr} à la place de \lstinline{NULL} ou de \lstinline{0} lorsque vous voulez représenter un pointeur nul.  ici, on écrirait : \lstinline{foo(nullptr);}
+
+
+\section*{Initialisation uniforme et liste d'initialisation}
+
+C++11 offre une nouvelle syntaxe pour initialiser les variables.
+
+Les déclarations suivantes sont équivalentes :
+\begin{lstlisting}
+int x{42};
+int x = {42};
+int x(42);
+int x = 42;
+\end{lstlisting}
+
+Cette syntaxe peut être utilisée pour initialiser des instances de classes, même lorsque la classe n'a pas de constructeur:
+
+\begin{lstlisting}
+struct Truc {
+	int a;
+	std::string b;
+};
+Truc t{42, "universe"}; // l'ordre doit respecter l'ordre de déclaration des variables membres de Truc
+\end{lstlisting}
+
+Cette syntaxe permet également de remplir des tableaux, des conteneurs, ainsi que d'autres types de la STL
+
+\begin{lstlisting}
+const char* alphabet[]  = {"alpha", "beta", "charlie", "delta", nullptr}; //déjà possible en C !
+std::vector<int> numbers = { 4, 8, 15, 16, 23, 42};
+std::map<std::string,std::string> secretIdentities = { 
+	{"Bruce Wayne", "Batman"}, 
+	{"Matt Murdock", "Daredevil"}
+};
+\end{lstlisting}
+
+\subsection*{Création d'alias de type}
+
+le mot clé \lstinline{using} peut être utilisé pour créer des alias de types afin de simplifier la lecture du code, ou de mieux montrer votre intention
+
+\begin{lstlisting}
+using Username = std::string;
+using Dictionary     = std::map<std::string,std::string>;
+
+Username myUserName{"toto"};
+\end{lstlisting}
+
+\subsection*{Aller plus loin}
+
+C++11 et C++14 offrent bien d'autres fonctionnalités. Lambdas, mots clés \lstinline{final} et \lstinline{override} pour l'héritage de classes, templates varidiques, héritage de construction, etc...
+
+Il vous appartient d'approfondir vos connaissances dans les technologies qui vous intéressent.
+A cette fin, vous pouvez consulter les sites et ouvrages suivants:
+
+\begin{itemize}
+\item \url{http://fr.cppreference.com/w/cpp/language}
+\item \url{http://fr.wikipedia.org/wiki/C++11}
+\item \url{https://isocpp.org/get-started} ( en anglais )
+\end{itemize}
+
+\makeatletter
+\renewcommand\@biblabel[1]{}
+\makeatother
+
+\bibliographystyle{ieeetr}
+\nocite{*}
+\bibliography{references}
+
+\end{document}
