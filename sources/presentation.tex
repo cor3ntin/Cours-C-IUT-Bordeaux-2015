@@ -17,6 +17,9 @@
 
 \usepackage[T1]{fontenc}
 \usepackage{inconsolata}
+\usepackage{xparse}
+\usepackage{soul}
+\usepackage{xcolor}
 
 
 
@@ -26,6 +29,7 @@
 \definecolor{code}{HTML}{333390}
 \definecolor{badcodecolor}{HTML}{7F0000}
 \definecolor{comment}{HTML}{006400}
+\setstcolor{red}
 
 \newcounter{QC}
 
@@ -47,11 +51,9 @@
 	basicstyle=\ttfamily\color{badcodecolor}\small,
 } 
 
-
-
 \title{Modern C++ et gestion des ressources}
 \author{Corentin Jabot}
-\date{Mai 2015}
+\date{Mai \st{2015} 2016 }
 
 \begin{document}
 \NoAutoSpacing
@@ -137,7 +139,7 @@
 	 \item Aucune feature supprimée, mais de nouvelles bonnes pratiques
 	 \item Affinement de la même philosophie et des mêmes objectifs
 	 \item Nombreuses nouvelles fonctionnalités
-	 \item C++ continue d'evoluer : C++14, C++17, C++20...
+	 \item C++ continue d'evoluer : C++14, C++17, C++19...
 \end{itemize}
 \end{frame}
 
